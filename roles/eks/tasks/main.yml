@@ -147,18 +147,13 @@
 
 - debug: var=efs
 
-- name: Configure EFS driver
-  copy:
-    src: "roles/{{ role_name }}/templates/efs-driver"
-    dest: /tmp/
-
-- name: Install EFS drivers
-  shell: "kubectl apply -k /tmp/efs-driver"
+- name: deploy EFS Provisioner helm chart
+  shell: "helm upgrade efs-prov stable/efs-provisioner --set efsProvisioner.efsFileSystemId={{ efs.stack_outputs.OutputFileSystemId }} --set efsProvisioner.awsRegion={{ region }}"
   
 - name: Configure prometheus values.yml
   template:
-    src: "roles/{{ role_name }}/templates/prom-op-values-ebs.yaml"
-    dest: /tmp/prom-op-values-ebs.yaml
+    src: "roles/{{ role_name }}/templates/prom-op-values-efs.yaml"
+    dest: /tmp/prom-op-values-efs.yaml
     
 - name: Create Monitoring Namespace
   k8s:
@@ -170,7 +165,7 @@
         name: monitoring
         
 - name: Install Prometheus operator
-  shell: "helm upgrade pm stable/prometheus-operator --install --namespace monitoring -f /tmp/prom-op-values-ebs.yaml --version 9.3.0"
+  shell: "helm upgrade pm stable/prometheus-operator --install --namespace monitoring -f /tmp/prom-op-values-efs.yaml --version 9.3.0"
   
 - name: Wait for Prometheus Operator Install
   shell: "kubectl rollout status deployment.apps/pm-prometheus-operator-operator -n monitoring"
