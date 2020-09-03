@@ -158,4 +158,4 @@ vpcCfg:
 
     eksInstanceTypeOperations: t3.large
 
-    system_administrators: arn:aws:iam::210614498666:assumed-role/AWSReservedSSO_130-SystemAdministrator_e69635ed758afe8e
+    system_administrators: arn:aws:iam::210614498666:role/AWSReservedSSO_130-SystemAdministrator_e69635ed758afe8e
