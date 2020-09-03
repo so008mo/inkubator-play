@@ -31,11 +31,10 @@
     src: "roles/{{ role_name }}/files/eks-cluster.yaml"
     dest: /tmp/eks-cluster.yaml
     
-# populate a clusters_exist list with names of clusters
-"\t"
- - name: "Getting existing clusters list"
-   command: "aws --region {{ region }}" eks list-clusters --query [clusters] --output text"
-   register: clusters_exist
+# populate a clusters_exist list with names of clusters TAB "\t"
+- name: "Getting existing clusters list"
+  command: "aws --region {{ region }}" eks list-clusters --query [clusters] --output text"
+  register: clusters_exist
    
 # create a list from clusters_exist
 - set_fact:
@@ -43,9 +42,9 @@
     
 - name: "Settting eksctl action to either Create or Update"
   set_fact:
-    eksctl_action: "{{ 'create' if (eks_cluster_name not in found_clusters_list) else 'update' }}"
+    eksctl_action: "{{ 'create' if (eksClusterName not in found_clusters_list) else 'update' }}"
     
-- name: "Running eksctl eksctl_action {{ eksctl_action | upper }}" cluster with name {{ eks_cluster_name | upper }}"
+- name: "Running eksctl eksctl_action {{ eksctl_action | upper }} cluster with name {{ eksClusterName | upper }}"
   command: "eksctl {{ eksctl_action }} cluster -f /tmp/eks-cluster.yaml"
   
 - name: Add Kubectl configuration
@@ -59,6 +58,7 @@
 
 - name: Get OIDC Info - Issuer URL
   shell: "aws eks describe-cluster --name {{ eksClusterName }} --region {{ region }} --query cluster.identity.oidc.issuer --output text"
+  register: oidc_issuer_url_output
   
 - name: Get OIDC Info - Issuer Host Path
   shell: "echo {{ oidc_issuer_url_output.stdout }} | cut -f 3- -d'/' "
