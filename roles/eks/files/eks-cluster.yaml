@@ -24,9 +24,9 @@ nodeGroups:
 - name: "{{ eksClusterName }}-ng-compute-az1"
   instanceType: "{{ eksInstanceTypeCompute }}"
   availabilityZones: ["{{ a_stack_az }}"]
-  desiredCapacity: "{{ eksNgSize }}"
-  minSize: "{{ eksNgMinSize }}"
-  maxSize: "{{ eksNgMaxSize }}"
+  desiredCapacity: {{ eksNgSize }}
+  minSize: {{ eksNgMinSize }}
+  maxSize: {{ eksNgMaxSize }}
   privateNetworking: true
   labels:
     gcs-nodegroup-type: ng-compute
@@ -52,9 +52,9 @@ nodeGroups:
 - name: "{{ eksClusterName }}-ng-compute-az2"
   instanceType: "{{ eksInstanceTypeCompute }}"
   availabilityZones: ["{{ b_stack_az }}"]
-  desiredCapacity: "{{ eksNgSize }}"
-  minSize: "{{ eksNgMinSize }}"
-  maxSize: "{{ eksNgMaxSize }}"
+  desiredCapacity: {{ eksNgSize }}
+  minSize: {{ eksNgMinSize }}
+  maxSize: {{ eksNgMaxSize }}
   privateNetworking: true
   labels:
     gcs-nodegroup-type: ng-compute
@@ -80,9 +80,9 @@ nodeGroups:
 - name: "{{ eksClusterName }}-ng-memory-az1"
   instanceType: "{{ eksInstanceTypeMemory }}"
   availabilityZones: ["{{ a_stack_az }}"]
-  desiredCapacity: "{{ eksNgSize }}"
-  minSize: "{{ eksNgMinSize }}"
-  maxSize: "{{ eksNgMaxSize }}"
+  desiredCapacity: {{ eksNgSize }}
+  minSize: {{ eksNgMinSize }}
+  maxSize: {{ eksNgMaxSize }}
   privateNetworking: true
   labels:
     gcs-nodegroup-type: ng-memory
@@ -109,8 +109,8 @@ nodeGroups:
   instanceType: "{{ eksInstanceTypeMemory }}"
   availabilityZones: ["{{ b_stack_az }}"]
   desiredCapacity: "{{ eksNgSize }}"
-  minSize: "{{ eksNgMinSize }}"
-  maxSize: "{{ eksNgMaxSize }}"
+  minSize: {{ eksNgMinSize }}
+  maxSize: {{ eksNgMaxSize }}
   privateNetworking: true
   labels:
     gcs-nodegroup-type: ng-memory
@@ -136,9 +136,9 @@ nodeGroups:
 - name: "{{ eksClusterName }}-ng-operations"
   instanceType: "{{ eksInstanceTypeOperations }}"
   availabilityZones: ["{{ a_stack_az }}"]
-  desiredCapacity: "{{ eksNgSize }}"
-  minSize: "{{ eksNgMinSize }}"
-  maxSize: "{{ eksNgMaxSize }}"
+  desiredCapacity: {{ eksNgSize }}
+  minSize: {{ eksNgMinSize }}
+  maxSize: {{ eksNgMaxSize }}
   privateNetworking: true
   volumeSize: 200
   volumeType: gp2
