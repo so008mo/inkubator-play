@@ -57,7 +57,7 @@
 - name: Set Authorization Config Map
   k8s:
     state: present
-    definition: "{{ lookup('template', 'aws-auth-cm.yaml' }}"
+    definition: "{{ lookup('template', 'aws-auth-cm.yaml') }}"
 
 - name: Get OIDC Info - Issuer URL
   shell: "aws eks describe-cluster --name {{ eksClusterName }} --region {{ region }} --query cluster.identity.oidc.issuer --output text"
