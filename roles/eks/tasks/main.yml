@@ -144,7 +144,7 @@
 - debug: var=efs
 
 - name: Configure EFS driver
-  template:
+  copy:
     src: "roles/{{ role_name }}/templates/efs-driver"
     dest: /tmp/
 
