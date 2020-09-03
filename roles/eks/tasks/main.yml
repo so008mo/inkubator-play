@@ -33,7 +33,7 @@
     
 # populate a clusters_exist list with names of clusters TAB "\t"
 - name: "Getting existing clusters list"
-  command: "aws --region {{ region }}" eks list-clusters --query [clusters] --output text"
+  command: "aws --region {{ region }} eks list-clusters --query [clusters] --output text"
   register: clusters_exist
    
 # create a list from clusters_exist
