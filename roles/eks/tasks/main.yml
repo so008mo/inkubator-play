@@ -8,6 +8,8 @@
     b_stack_az: "{{ regions[region]['vpcAvailabilityZone2'] }}"
     a_stack_priv_subnet: "{{ vpcCfg[env]['a_priv_subnet_id'] }}"
     b_stack_priv_subnet: "{{ vpcCfg[env]['b_priv_subnet_id'] }}"
+    a_stack_pub_subnet: "{{ vpcCfg[env]['a_pub_subnet_id'] }}"
+    b_stack_pub_subnet: "{{ vpcCfg[env]['b_pub_subnet_id'] }}"
     eksNgSize: "{{ vpcCfg[env]['eksNgSize'] }}"
     eksNgMinSize: "{{ vpcCfg[env]['eksNgMinSize'] }}"
     eksNgMaxSize: "{{ vpcCfg[env]['eksNgMaxSize'] }}"
