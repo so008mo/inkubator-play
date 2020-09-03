@@ -10,14 +10,14 @@ vpc:
   id: "{{ vpc_id }}"
   subnets:
     public:
-      "{{ a_stack_az }}":
+      {{ a_stack_az }}:
         id: "{{ a_stack_pub_subnet }}"
-      "{{ b_stack_az }}":
+      {{ b_stack_az }}:
         id: "{{ b_stack_pub_subnet }}"
     private:
-      "{{ a_stack_az }}":
+      {{ a_stack_az }}:
         id: "{{ a_stack_priv_subnet }}"
-      "{{ b_stack_az }}":
+      {{ b_stack_az }}:
         id: "{{ b_stack_priv_subnet }}"
         
 nodeGroups:
@@ -108,7 +108,7 @@ nodeGroups:
 - name: "{{ eksClusterName }}-ng-memory-az2"
   instanceType: "{{ eksInstanceTypeMemory }}"
   availabilityZones: ["{{ b_stack_az }}"]
-  desiredCapacity: "{{ eksNgSize }}"
+  desiredCapacity: {{ eksNgSize }}
   minSize: {{ eksNgMinSize }}
   maxSize: {{ eksNgMaxSize }}
   privateNetworking: true
