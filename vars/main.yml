@@ -130,17 +130,21 @@ regions:
 vpcCfg:
   prf3:
     
-    vpcCidr: 
+    vpcCidr: 10.97.80.0/20
     
     eksClusterName: gcs-eks-prf3
     
-    eksImageId: 10.97.80.0/20
+    eksImageId: ami-0c8a11610abe0a666
 
     vpc_id: vpc-d3b0b7b5
     
     a_priv_subnet_id: subnet-38203063
     
     b_priv_subnet_id: subnet-8d948ea0
+    
+    a_pub_subnet_id: subnet-952030ce
+    
+    b_pub_subnet_id: subnet-62958f4f
     
     eksNgSize: 1
     
@@ -152,4 +156,6 @@ vpcCfg:
 
     eksInstanceTypeMemory: m5.xlarge
 
-    eksInstanceTypeOperations: t3.large     
+    eksInstanceTypeOperations: t3.large
+
+    system_administrators: arn:aws:iam::210614498666:assumed-role/AWSReservedSSO_130-SystemAdministrator_e69635ed758afe8e

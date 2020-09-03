@@ -15,7 +15,8 @@
     eksInstanceTypeMemory: "{{ vpcCfg[env]['eksInstanceTypeMemory'] }}"
     eksInstanceTypeOperations: "{{ vpcCfg[env]['eksInstanceTypeOperations'] }}"
     system_administrators: "{{ vpcCfg[env]['system_administrators'] }}" 
-    
+
+- name: Create aws config stack    
   cloudformation:
     stack_name: "{{ eksClusterName }}-config"
     state: present
