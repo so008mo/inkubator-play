@@ -1,0 +1,471 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: fluentd
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: fluentd
+roleRef:
+  kind: ClusterRole
+  name: fluentd
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: fluentd
+  # This namespace setting will limit fluentd to watching/listing/getting pods in the default namespace. If you want it to be able to log your kube-system namespace as well, comment the line out.
+  namespace: monitoring
+
+--- 
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-sumologic
+  namespace: monitoring
+  labels:
+    app: fluentd-sumologic
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      app: fluentd-sumologic
+  template:
+    metadata:
+      labels:
+        app: fluentd-sumologic
+    spec:
+      serviceAccountName: fluentd
+      volumes:
+      - name: pos-files
+        hostPath:
+          path: /var/run/fluentd-pos
+          type: ""
+      - name: host-logs
+        hostPath:
+          path: /var/log/
+      - name: docker-logs
+        hostPath:
+          path: /var/lib/docker
+      - name: fluentd-sumologic-config
+        configMap:
+          name: fluentd-sumologic-config
+      containers:
+      - image: sumologic/fluentd-kubernetes-sumologic:v2.4.2
+        name: fluentd
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: fluentd-sumologic-config
+          mountPath: /fluentd/etc
+        - name: host-logs
+          mountPath: /mnt/log/
+          readOnly: true
+        - name: host-logs
+          mountPath: /var/log/
+          readOnly: true
+        - name: docker-logs
+          mountPath: /var/lib/docker/
+          readOnly: true
+        - name: pos-files
+          mountPath: /mnt/pos/
+        env:
+        - name: COLLECTOR_URL
+          valueFrom:
+            secretKeyRef:
+              name: sumologic
+              key: collector-url
+        # Improve GC for memory limited envs like docker.
+        - name: RUBY_GC_HEAP_OLDOBJECT_LIMIT_FACTOR
+          value: "0.9"
+      tolerations:
+          #- operator: "Exists"
+          - effect: "NoSchedule"
+            key: "node-role.kubernetes.io/master"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-sumologic-config
+  labels:
+    app: fluentd-sumologic
+  namespace: monitoring
+data:
+  out.sumo.conf: |-
+    <match **>
+      @type sumologic
+      log_key log
+      endpoint "#{ENV['COLLECTOR_URL']}"
+      verify_ssl "#{ENV['VERIFY_SSL']}"
+      log_format "#{ENV['LOG_FORMAT']}"
+      flush_interval "#{ENV['FLUSH_INTERVAL']}"
+      num_threads "#{ENV['NUM_THREADS']}"
+      open_timeout 60
+      add_timestamp "#{ENV['ADD_TIMESTAMP']}"
+      timestamp_key "#{ENV['TIMESTAMP_KEY']}"
+      proxy_uri "#{ENV['PROXY_URI']}"
+    </match>
+
+  fluent.file.conf: |-
+    <match fluent.**>
+      @type null
+    </match>
+
+    <source>
+      @type monitor_agent
+      bind 0.0.0.0
+      port 24220
+    </source>
+
+    @include /fluentd/etc/file.source.*.conf
+    @include /fluentd/etc/user/*.conf
+    @include /fluentd/etc/out.sumo.conf
+
+  fluent.forward.conf: |-
+    ## built-in TCP input
+    ## $ echo <json> | fluent-cat <tag>
+    <source>
+      @type forward
+      @id forward_input
+      port "#{ENV['FORWARD_INPUT_PORT']}"
+      bind "#{ENV['FORWARD_INPUT_BIND']}"
+    </source>
+
+    <source>
+      @type monitor_agent
+      bind 0.0.0.0
+      port 24220
+    </source>
+
+    @include /fluentd/etc/forward.source.*.conf
+    @include /fluentd/etc/user/*.conf
+    @include /fluentd/etc/out.sumo.conf
+
+  fluent.systemd.conf: |-
+    <match fluent.**>
+      @type null
+    </match>
+
+    <source>
+      @type monitor_agent
+      bind 0.0.0.0
+      port 24220
+    </source>
+
+    @include /fluentd/etc/systemd.source.*.conf
+    @include /fluentd/etc/user/*.conf
+    @include /fluentd/etc/out.sumo.conf
+
+  file.source.containers.conf: |-
+    <source>
+      @type tail
+      format json
+      time_key "#{ENV['TIME_KEY']}"
+      path "#{ENV['CONTAINER_LOGS_PATH']}"
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-containers.log.pos
+      time_format %Y-%m-%dT%H:%M:%S.%NZ
+      tag containers.*
+      read_from_head "#{ENV['READ_FROM_HEAD']}"
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter containers.**>
+      @type concat
+      key log
+      multiline_start_regexp "#{ENV['MULTILINE_START_REGEXP']}"
+      separator "#{ENV['CONCAT_SEPARATOR']}"
+      timeout_label @NORMAL
+    </filter>
+
+    <match containers.**>
+      @type relabel
+      @label @NORMAL
+    </match>
+
+    <label @NORMAL>
+      <filter containers.**>
+        @type kubernetes_metadata
+        @log_level warn
+        annotation_match ["sumologic\.com.*"]
+        de_dot false
+        watch "#{ENV['K8S_METADATA_FILTER_WATCH']}"
+        ca_file "#{ENV['K8S_METADATA_FILTER_CA_FILE']}"
+        verify_ssl "#{ENV['K8S_METADATA_FILTER_VERIFY_SSL']}"
+        client_cert "#{ENV['K8S_METADATA_FILTER_CLIENT_CERT']}"
+        client_key "#{ENV['K8S_METADATA_FILTER_CLIENT_KEY']}"
+        bearer_token_file "#{ENV['K8S_METADATA_FILTER_BEARER_TOKEN_FILE']}"
+        cache_size "#{ENV['K8S_METADATA_FILTER_BEARER_CACHE_SIZE']}"
+        cache_ttl "#{ENV['K8S_METADATA_FILTER_BEARER_CACHE_TTL']}"
+        tag_to_kubernetes_name_regexp '.+?\.containers\.(?<pod_name>[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$'
+        merge_json_log false
+      </filter>
+
+      <filter containers.**>
+        @type kubernetes_sumologic
+        source_name "#{ENV['SOURCE_NAME']}"
+        source_host "#{ENV['SOURCE_HOST']}"
+        log_format "#{ENV['LOG_FORMAT']}"
+        kubernetes_meta "#{ENV['KUBERNETES_META']}"
+        kubernetes_meta_reduce "#{ENV['KUBERNETES_META_REDUCE']}"
+        add_stream "#{ENV['ADD_STREAM']}"
+        add_time "#{ENV['ADD_TIME']}"
+        source_category "#{ENV['SOURCE_CATEGORY']}"
+        source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+        source_category_replace_dash "#{ENV['SOURCE_CATEGORY_REPLACE_DASH']}"
+        exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+        exclude_pod_regex "#{ENV['EXCLUDE_POD_REGEX']}"
+        exclude_container_regex "#{ENV['EXCLUDE_CONTAINER_REGEX']}"
+        exclude_host_regex "#{ENV['EXCLUDE_HOST_REGEX']}"
+      </filter>
+
+      @include /fluentd/etc/out.sumo.conf
+    </label>
+
+  file.source.docker.conf: |-
+    # Examples:
+    # time="2016-02-04T06:51:03.053580605Z" level=info msg="GET /containers/json"
+    # time="2016-02-04T07:53:57.505612354Z" level=error msg="HTTP Error" err="No such image: -f" statusCode=404
+    <source>
+      @type tail
+      format /^time="(?<time>[^)]*)" level=(?<severity>[^ ]*) msg="(?<message>[^"]*)"( err="(?<error>[^"]*)")?( statusCode=($<status_code>\d+))?/
+      time_format %Y-%m-%dT%H:%M:%S.%NZ
+      path /var/lib/docker.log
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-docker.log.pos
+      tag docker
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter docker.**>
+      @type kubernetes_sumologic
+      source_category docker
+      source_name k8s_docker
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+    </filter>
+
+  file.source.kubernetes.conf: |-
+    # Example:
+    # 2015-12-21 23:17:22,066 [salt.state       ][INFO    ] Completed state [net.ipv4.ip_forward] at time 23:17:22.066081
+    <source>
+      @type tail
+      format /^(?<time>[^ ]* [^ ,]*)[^\[]*\[[^\]]*\]\[(?<severity>[^ \]]*) *\] (?<message>.*)$/
+      time_format %Y-%m-%d %H:%M:%S
+      path /mnt/log/salt/minion
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-salt.pos
+      tag salt
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter salt.**>
+      @type kubernetes_sumologic
+      source_category salt
+      source_name k8s_salt
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+    </filter>
+
+
+    # Example:
+    # Dec 21 23:17:22 gke-foo-1-1-4b5cbd14-node-4eoj startupscript: Finished running startup script /var/run/google.startup.script
+    <source>
+      @type tail
+      format syslog
+      path /mnt/log/startupscript.log
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-startupscript.log.pos
+      tag startupscript
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter startupscript.**>
+      @type kubernetes_sumologic
+      source_category startupscript
+      source_name k8s_startupscript
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+    </filter>
+
+
+    # Multi-line parsing is required for all the kube logs because very large log
+    # statements, such as those that include entire object bodies, get split into
+    # multiple lines by glog.
+
+
+    # Example:
+    # I0204 07:32:30.020537    3368 server.go:1048] POST /stats/container/: (13.972191ms) 200 [[Go-http-client/1.1] 10.244.1.3:40537]
+    <source>
+      @type tail
+      format multiline
+      multiline_flush_interval 5s
+      format_firstline /^\w\d{4}/
+      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
+      time_format %m%d %H:%M:%S.%N
+      path /mnt/log/kubelet.log
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-kubelet.log.pos
+      tag kubelet
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter kubelet.**>
+      @type kubernetes_sumologic
+      source_category kubelet
+      source_name k8s_kubelet
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+    </filter>
+
+
+    # Example
+    # 2017-11-06T18:53:49.774520188Z AUDIT: id="6a8sdffd918-0b6a-4aee-a3a1-f1sdf61596" ip="172.11.23.88" method="GET" user="kubelet" groups="\"system:nodes\",\"system:authenticated\"" as="<self>" asgroups="<lookup>" namespace="monty" uri="/api/v1/namespaces/monty/secrets/default-token-fntvb?resourceVersion=0"
+    # 2017-02-09T00:15:57.993528822Z AUDIT: id="6a8sdffd918-0b6a-4aee-a3a1-f1sdf61596" response="200"
+    <source>
+      @type tail
+      format json
+      time_key timestamp
+      time_format %Y-%m-%dT%H:%M:%SZ
+      path "#{ENV['AUDIT_LOG_PATH']}"
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-kube-audit.log.pos
+      tag kube-audit
+      read_from_head "#{ENV['READ_FROM_HEAD']}"
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter kube-audit.**>
+      @type kubernetes_sumologic
+      source_category kube-audit
+      source_name k8s_kube-audit
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+    </filter>
+
+
+    # Example:
+    # I0603 15:31:05.793605       6 cluster_manager.go:230] Reading config from path /etc/gce.conf
+    <source>
+      @type tail
+      format multiline
+      multiline_flush_interval 5s
+      format_firstline /^\w\d{4}/
+      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
+      time_format %m%d %H:%M:%S.%N
+      path /mnt/log/glbc.log
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-glbc.log.pos
+      tag glbc
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter glbc.**>
+      @type kubernetes_sumologic
+      source_category glbc
+      source_name k8s_glbc
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+    </filter>
+
+
+    # Example:
+    # I0603 15:31:05.793605       6 cluster_manager.go:230] Reading config from path /etc/gce.conf
+    <source>
+      @type tail
+      format multiline
+      multiline_flush_interval 5s
+      format_firstline /^\w\d{4}/
+      format1 /^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<message>.*)/
+      time_format %m%d %H:%M:%S.%N
+      path /mnt/log/cluster-autoscaler.log
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-cluster-autoscaler.log.pos
+      tag cluster-autoscaler
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter cluster-autoscaler.**>
+      @type kubernetes_sumologic
+      source_category cluster-autoscaler
+      source_name k8s_cluster-autoscaler
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+    </filter>
+
+  systemd.source.containers.conf: |-
+    <source>
+      @type tail
+      format json
+      time_key "#{ENV['TIME_KEY']}"
+      path "#{ENV['CONTAINER_LOGS_PATH']}"
+      exclude_path "#{ENV['EXCLUDE_PATH']}"
+      pos_file /mnt/pos/ggcp-containers.log.pos
+      time_format %Y-%m-%dT%H:%M:%S.%NZ
+      tag containers.*
+      read_from_head "#{ENV['READ_FROM_HEAD']}"
+      enable_stat_watcher "#{ENV['ENABLE_STAT_WATCHER']}"
+    </source>
+
+    <filter containers.**>
+      @type kubernetes_metadata
+      @log_level warn
+      annotation_match ["sumologic\.com.*"]
+      de_dot false
+      watch "#{ENV['K8S_METADATA_FILTER_WATCH']}"
+      ca_file "#{ENV['K8S_METADATA_FILTER_CA_FILE']}"
+      verify_ssl "#{ENV['K8S_METADATA_FILTER_VERIFY_SSL']}"
+      client_cert "#{ENV['K8S_METADATA_FILTER_CLIENT_CERT']}"
+      client_key "#{ENV['K8S_METADATA_FILTER_CLIENT_KEY']}"
+      bearer_token_file "#{ENV['K8S_METADATA_FILTER_BEARER_TOKEN_FILE']}"
+      cache_size "#{ENV['K8S_METADATA_FILTER_BEARER_CACHE_SIZE']}"
+      cache_ttl "#{ENV['K8S_METADATA_FILTER_BEARER_CACHE_TTL']}"
+      tag_to_kubernetes_name_regexp '.+?\.containers\.(?<pod_name>[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$'
+      merge_json_log false
+    </filter>
+
+    <filter containers.**>
+      @type kubernetes_sumologic
+      source_name "#{ENV['SOURCE_NAME']}"
+      source_host "#{ENV['SOURCE_HOST']}"
+      log_format "#{ENV['LOG_FORMAT']}"
+      kubernetes_meta "#{ENV['KUBERNETES_META']}"
+      kubernetes_meta_reduce "#{ENV['KUBERNETES_META_REDUCE']}"
+      add_stream "#{ENV['ADD_STREAM']}"
+      add_time "#{ENV['ADD_TIME']}"
+      source_category "#{ENV['SOURCE_CATEGORY']}"
+      source_category_prefix "#{ENV['SOURCE_CATEGORY_PREFIX']}"
+      source_category_replace_dash "#{ENV['SOURCE_CATEGORY_REPLACE_DASH']}"
+      exclude_namespace_regex "#{ENV['EXCLUDE_NAMESPACE_REGEX']}"
+      exclude_pod_regex "#{ENV['EXCLUDE_POD_REGEX']}"
+      exclude_container_regex "#{ENV['EXCLUDE_CONTAINER_REGEX']}"
+      exclude_host_regex "#{ENV['EXCLUDE_HOST_REGEX']}"
+    </filter>

@@ -1,0 +1,32 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Common EKS Infrastructure
+  Author: Derek DeGennaro <derek.degenarro@pb.com>
+
+Parameters:
+
+  EnvironmentName: 
+    Type: String
+
+  ImageId:
+    Type: AWS::EC2::Image::Id
+
+  K8sVersion:
+    Type: String
+
+Resources:
+
+  NodeGroupImageIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/k8s/ngImageId/${EnvironmentName}'
+      Type: String
+      Value: !Ref ImageId
+
+  K8sVersionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/k8s/version/${EnvironmentName}'
+      Type: String
+      Value: !Ref K8sVersion

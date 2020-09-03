@@ -1,0 +1,108 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create EFS, mount points, security groups for GCS EKS
+Parameters:
+  vpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC Id
+  subnetId1:
+    Type: AWS::EC2::Subnet::Id
+    Description: ID of private subnet in first AZ.
+  subnetId2:
+    Type: AWS::EC2::Subnet::Id
+    Description: ID of private subnet in second AZ.
+  fileSystemName:
+    Type: String
+    Description: The name of the EFS file system.
+  vpcCidr:
+    Type: String
+    Description: The CIDR associated with the VPC.
+Resources:
+  mountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: vpcId
+      GroupDescription: Security group for mount target
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp:
+          Ref: vpcCidr
+  fileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      FileSystemTags:
+      - Key: Name
+        Value:
+          Ref: fileSystemName
+  mountTargetAZ1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: fileSystem
+      SubnetId:
+        Ref: subnetId1
+      SecurityGroups:
+      - Ref: mountTargetSecurityGroup
+  mountTargetAZ2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: fileSystem
+      SubnetId:
+        Ref: subnetId2
+      SecurityGroups:
+      - Ref: mountTargetSecurityGroup
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+  RolePoliciesCW:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CWLogs
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - logs:Create*
+          - logs:PutLogEvents
+          - s3:GetObject
+          Resource:
+          - arn:aws:logs:*:*:*
+          - arn:aws:s3:::*
+      Roles:
+      - Ref: InstanceRole
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: InstanceRole
+Outputs:
+  OutputFileSystemId:
+    Description: Id of Elastic File System
+    Value:
+      Ref: fileSystem
+  OutputMountTarget1:
+    Value:
+      Ref: mountTargetAZ1
+  OutputMountTarget2:
+    Value:
+      Ref: mountTargetAZ2
+  OutputInstanceProfile:
+    Value:
+      Ref: InstanceProfile
+  OutputInstanceRole:
+    Value:
+      Ref: InstanceRole

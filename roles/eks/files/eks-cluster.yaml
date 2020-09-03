@@ -1,0 +1,167 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: "{{ eksClusterName }}"
+  region: "{{ region }}"
+  version: "{{ k8sVersion }}"
+
+vpc:
+  id: "{{ vpc_id }}"
+  subnets:
+    public:
+      {{ a_stack_az }}:
+        id: "{{ a_stack_pub_subnet }}"
+      {{ b_stack_az }}:
+        id: "{{ b_stack_pub_subnet }}"
+    private:
+      {{ a_stack_az }}:
+        id: "{{ a_stack_priv_subnet }}"
+      {{ b_stack_az }}:
+        id: "{{ b_stack_priv_subnet }}"
+        
+nodeGroups:
+- name: "{{ eksClusterName }}-ng-compute-az1"
+  instanceType: "{{ eksInstanceTypeCompute }}"
+  availabilityZones: ["{{ a_stack_az }}"]
+  desiredCapacity: "{{ eksNgSize }}"
+  minSize: "{{ eksNgMinSize }}"
+  maxSize: "{{ eksNgMaxSize }}"
+  privateNetworking: true
+  labels:
+    gcs-nodegroup-type: ng-compute
+  ssh:
+    publicKeyName: "{{ keyPairName }}"
+  iam:
+    withAddonPolicies:
+      externalDNS: true
+      autoScaler: true
+      efs: true
+      ebs: true
+      cloudWatch: true
+      certManager: true
+      albIngress: true
+  kubeletExtraConfig:
+    evictionHard:
+      memory.available:  "200Mi"
+      nodefs.available: "10%"
+  tags:
+    gcs-cluster-autoscaler-enabled: "true"
+    CrowdStrike_Exception: "EKS"  
+    
+- name: "{{ eksClusterName }}-ng-compute-az2"
+  instanceType: "{{ eksInstanceTypeCompute }}"
+  availabilityZones: ["{{ b_stack_az }}"]
+  desiredCapacity: "{{ eksNgSize }}"
+  minSize: "{{ eksNgMinSize }}"
+  maxSize: "{{ eksNgMaxSize }}"
+  privateNetworking: true
+  labels:
+    gcs-nodegroup-type: ng-compute
+  ssh:
+    publicKeyName: "{{ keyPairName }}"
+  iam:
+    withAddonPolicies:
+      externalDNS: true
+      autoScaler: true
+      efs: true
+      ebs: true
+      cloudWatch: true
+      certManager: true
+      albIngress: true
+  kubeletExtraConfig:
+    evictionHard:
+      memory.available:  "200Mi"
+      nodefs.available: "10%"
+  tags:
+    gcs-cluster-autoscaler-enabled: "true"
+    CrowdStrike_Exception: "EKS"
+    
+- name: "{{ eksClusterName }}-ng-memory-az1"
+  instanceType: "{{ eksInstanceTypeMemory }}"
+  availabilityZones: ["{{ a_stack_az }}"]
+  desiredCapacity: "{{ eksNgSize }}"
+  minSize: "{{ eksNgMinSize }}"
+  maxSize: "{{ eksNgMaxSize }}"
+  privateNetworking: true
+  labels:
+    gcs-nodegroup-type: ng-memory
+  ssh:
+    publicKeyName: "{{ keyPairName }}"
+  iam:
+    withAddonPolicies:
+      externalDNS: true
+      autoScaler: true
+      efs: true
+      ebs: true
+      cloudWatch: true
+      certManager: true
+      albIngress: true
+  kubeletExtraConfig:
+    evictionHard:
+      memory.available:  "200Mi"
+      nodefs.available: "10%"
+  tags:
+    gcs-cluster-autoscaler-enabled: "true"
+    CrowdStrike_Exception: "EKS"
+    
+- name: "{{ eksClusterName }}-ng-memory-az2"
+  instanceType: "{{ eksInstanceTypeMemory }}"
+  availabilityZones: ["{{ b_stack_az }}"]
+  desiredCapacity: "{{ eksNgSize }}"
+  minSize: "{{ eksNgMinSize }}"
+  maxSize: "{{ eksNgMaxSize }}"
+  privateNetworking: true
+  labels:
+    gcs-nodegroup-type: ng-memory
+  ssh:
+    publicKeyName: "{{ keyPairName }}"
+  iam:
+    withAddonPolicies:
+      externalDNS: true
+      autoScaler: true
+      efs: true
+      ebs: true
+      cloudWatch: true
+      certManager: true
+      albIngress: true
+  kubeletExtraConfig:
+    evictionHard:
+      memory.available:  "200Mi"
+      nodefs.available: "10%"
+  tags:
+    gcs-cluster-autoscaler-enabled: "true"
+    CrowdStrike_Exception: "EKS"
+    
+- name: "{{ eksClusterName }}-ng-operations"
+  instanceType: "{{ eksInstanceTypeOperations }}"
+  availabilityZones: ["{{ a_stack_az }}"]
+  desiredCapacity: "{{ eksNgSize }}"
+  minSize: "{{ eksNgMinSize }}"
+  maxSize: "{{ eksNgMaxSize }}"
+  privateNetworking: true
+  volumeSize: 200
+  volumeType: gp2
+  volumeEncrypted: false
+  labels:
+    gcs-nodegroup-type: ng-operations
+  taints:
+    gcs-nodegroup-taint: "ng-operations:PreferNoSchedule"
+  ssh:
+    publicKeyName: "{{ keyPairName }}"
+  iam:
+    withAddonPolicies:
+      externalDNS: true
+      autoScaler: true
+      efs: true
+      ebs: true
+      cloudWatch: true
+      certManager: true
+      albIngress: true
+  kubeletExtraConfig:
+    evictionHard:
+      memory.available:  "200Mi"
+      nodefs.available: "10%"
+  tags:
+    gcs-cluster-autoscaler-enabled: "true"
+    CrowdStrike_Exception: "EKS"
