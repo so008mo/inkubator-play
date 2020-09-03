@@ -131,10 +131,10 @@
     region: "{{ region }}"
     template: "roles/{{ role_name }}/files/amazon-eks-efs.yaml"
     template_parameters:
-      vpcId: {{ vpc_id }}
-      subnetId1: {{ a_stack_priv_subnet }}
-      subnetId2: {{ b_stack_priv_subnet }}
-      fileSystemName: {{ eksClusterName }}-efs
+      vpcId: "{{ vpc_id }}"
+      subnetId1: "{{ a_stack_priv_subnet }}"
+      subnetId2: "{{ b_stack_priv_subnet }}"
+      fileSystemName: "{{ eksClusterName }}-efs"
       vpcCidr: "{{ vpcCfg[env]['vpcCidr'] }}"
   register: efs
 
