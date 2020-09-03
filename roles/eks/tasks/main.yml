@@ -111,7 +111,7 @@
 - name: Create read only role for k8s dashboard
   k8s:
     state: present
-    definition: "{{ lookup('template', 'dashboard-readonly-role.yaml'}}"
+    definition: "{{ lookup('template', 'dashboard-readonly-role.yaml') }}"
 
 - name: Create power user role for k8s dashboard
   k8s:
