@@ -11,6 +11,10 @@ keyPairName: gcs-vpc
 
 k8sVersion: 1.16
 
+cicd_tools: arn:aws:iam::211613195758:user/gcs-cicd-automation
+
+cicd_dev: arn:aws:iam::130005402569:user/gcs-cicd-automation
+
 # AWS Regions
 # Source: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_website_region_endpoints
 regions:

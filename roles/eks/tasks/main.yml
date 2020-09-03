@@ -54,10 +54,14 @@
   shell: "aws eks update-kubeconfig --name {{ eksClusterName }} --region {{ region }}"
   ignore_errors: yes
   
-- name: Set Authorization Config Map
-  k8s:
-    state: present
-    definition: "{{ lookup('template', 'aws-auth-cm.yaml') }}"
+- name: Update aws-auth ConfigMap with System_Admins
+  command: "eksctl create iamidentitymapping --cluster {{ eksClusterName }} --arn {{ system_administrators }} --group system:masters --username gcsadmin"
+
+- name: Update aws-auth Config Map with cicd-automation user
+  command: "eksctl create iamidentitymapping --cluster {{ eksClusterName }} --arn {{ cicd_tools }} --group system:masters --username gcsadmin"
+
+- name: Update aws-auth Config Map with cicd-automation dev user
+  command: "eksctl create iamidentitymapping --cluster {{ eksClusterName }} --arn {{ cicd_dev }} --group system:masters --username gcsadmin"
 
 - name: Get OIDC Info - Issuer URL
   shell: "aws eks describe-cluster --name {{ eksClusterName }} --region {{ region }} --query cluster.identity.oidc.issuer --output text"
