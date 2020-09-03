@@ -116,7 +116,7 @@
 - name: Create power user role for k8s dashboard
   k8s:
     state: present
-    definition: "{{ lookup('template', 'dashboard-poweruser.yaml'}}"
+    definition: "{{ lookup('template', 'dashboard-poweruser.yaml') }}"
 
 - name: retreive the token for read only role
   shell: "kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep eks-dashboard-readonly | awk '{print $1}')"
@@ -125,7 +125,7 @@
 - name: Install Cluster AutoScaler
   k8s:
     state: present
-    definition: "{{ lookup('template', 'cluster-autoscaler.yaml'}}"
+    definition: "{{ lookup('template', 'cluster-autoscaler.yaml') }}"
 
 - name: Create EFS Cloudformation Stack
   cloudformation:
