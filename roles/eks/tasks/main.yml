@@ -179,4 +179,4 @@
     dest: /tmp/sumo-values.yaml
 
 - name: Install sumologic helm chart
-  shell: "helm upgrade --install fluentd-sumologic -f /tmp/sumo-values.yaml --namespace monitoring stable/sumologic"
+  shell: "helm upgrade --install fluentd-sumologic -f /tmp/sumo-values.yaml --namespace monitoring stable/sumologic-fluentd"
