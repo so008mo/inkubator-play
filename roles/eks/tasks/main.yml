@@ -171,9 +171,12 @@
   shell: "kubectl rollout status deployment.apps/pm-prometheus-operator-operator -n monitoring"
 
 - name: Create Sumologic Secret
-  shell: "kubectl create secret generic sumologic --from-literal=collector-url={{ collector_url }} -n monitoring"
+  shell: "kubectl create secret generic sumologic-secret --from-literal=collector-url={{ collector_url }} -n monitoring"
+  
+- name: Configure prometheus values.yml
+  template:
+    src: "roles/{{ role_name }}/templates/sumo-values.yaml"
+    dest: /tmp/sumo-values.yaml
 
-- name: Create Fluentd DaemonSet and configure sumologic endpoint
-  k8s:
-    state: present
-    definition: "{{ lookup('template', 'fluentd-sumologic.yaml'}}"
+- name: Install sumologic helm chart
+  shell: "helm upgrade --install fluentd-sumologic -f /tmp/sumo-values.yaml --namespace monitoring stable/sumologic"
