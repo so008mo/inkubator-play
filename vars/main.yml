@@ -15,6 +15,8 @@ cicd_tools: arn:aws:iam::211613195758:user/gcs-cicd-automation
 
 cicd_dev: arn:aws:iam::130005402569:user/gcs-cicd-automation
 
+collector_url: https://endpoint6.collection.us2.sumologic.com/receiver/v1/http/ZaVnC4dhaV1btZHAtMPxEzOha0PPg59vRZhtDkkMeK8lkcDc_76hXjeaX3M565rsMAfdldB1yKRTW2JbYdk0jeha7Yo3zRPaOT6n4FbKofHP0sjW3vZmPQ==
+
 # AWS Regions
 # Source: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_website_region_endpoints
 regions:
