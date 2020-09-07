@@ -1,0 +1,46 @@
+image:
+  name: sumologic/fluentd-kubernetes-sumologic
+  tag: v2.4.2
+  pullPolicy: IfNotPresent
+
+## Allow the DaemonSet to perform a rolling update on helm update
+## ref: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
+updateStrategy: RollingUpdate
+
+sumologic:
+
+  ## Use existing Secret which stores collector url instead of creating a new one
+  collectorUrlExistingSecret: sumologic-secret
+
+  ## Option to control the enabling of stat_watcher. (Default true)
+  ## ref: https://docs.fluentd.org/v1.0/articles/in_tail#enable_stat_watcher
+  enableStatWatcher: false
+
+## Note: Requires Kubernetes 1.8+ to enable this feature via hostPath volume type
+## By default, the daemonset will store position files, for logs tailed, in an
+## emptyDir. If you have already have a directory on the host for storing pos files,
+## specify it here. Otherwise, it can create the directory for you by setting the type
+## to "DirectoryOrCreate".
+persistence:
+  enabled: false
+  hostPath: /var/run/fluentd-pos
+  createPath: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 256m
+    memory: 256Mi
+
+rbac:
+  ## If true, create and use RBAC resources
+  create: true
+
+  ## Ignored if rbac.create is true
+  serviceAccountName: default
+
+daemonset: {}
+  # Priority Class to use for deployed daemonsets
+  # priorityClassName: ""
