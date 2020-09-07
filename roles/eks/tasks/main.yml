@@ -173,7 +173,7 @@
 - name: Create Sumologic Secret
   shell: "kubectl create secret generic sumologic-secret --from-literal=collector-url={{ collector_url }} -n monitoring"
   
-- name: Configure prometheus values.yml
+- name: Configure sumo values.yml
   template:
     src: "roles/{{ role_name }}/templates/sumo-values.yaml"
     dest: /tmp/sumo-values.yaml
