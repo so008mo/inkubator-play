@@ -178,6 +178,9 @@
   template:
     src: "roles/{{ role_name }}/templates/sumologic-secret.yaml"
     dest: /tmp/sumologic-secret.yaml
+    
+- name: Create sumologic secret
+  shell: "kubectl apply -f /tmp/sumologic-secret.yaml"
 
 - name: Configure sumo values.yml
   template:
