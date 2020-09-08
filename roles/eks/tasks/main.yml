@@ -148,7 +148,7 @@
 - debug: var=efs
 
 - name: deploy EFS Provisioner helm chart
-  shell: "helm upgrade efs-prov stable/efs-provisioner --set efsProvisioner.efsFileSystemId={{ efs.stack_outputs.OutputFileSystemId }} --set efsProvisioner.awsRegion={{ region }} --set image.tag=v2.4.0 --set busyboxImage.tag=1.27"
+  shell: "helm upgrade --install efs-prov stable/efs-provisioner --set efsProvisioner.efsFileSystemId={{ efs.stack_outputs.OutputFileSystemId }} --set efsProvisioner.awsRegion={{ region }} --set image.tag=v2.4.0 --set busyboxImage.tag=1.27"
   
 - name: Configure prometheus values.yml
   template:
@@ -165,7 +165,7 @@
         name: monitoring
         
 - name: Install Prometheus operator
-  shell: "helm upgrade pm stable/prometheus-operator --install --namespace monitoring -f /tmp/prom-op-values-efs.yaml --version 9.3.0"
+  shell: "helm upgrade --install pm stable/prometheus-operator --install --namespace monitoring -f /tmp/prom-op-values-efs.yaml --version 9.3.0"
   
 - name: Wait for Prometheus Operator Install
   shell: "kubectl rollout status deployment.apps/pm-prometheus-operator-operator -n monitoring"
