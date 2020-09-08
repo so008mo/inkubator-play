@@ -35,7 +35,7 @@ prometheus:
           - ReadWriteMany
           resources:
             requests:
-              storage: 10Gi
+              storage: 15Gi
 
 #alretManager Setup
 alertmanager:
@@ -63,7 +63,7 @@ alertmanager:
           - ReadWriteMany
           resources:
             requests:
-              storage: 10Gi
+              storage: 15Gi
 
 #Grafana Setup
 grafana:
@@ -86,7 +86,7 @@ grafana:
     enabled: true
     storageClassName: aws-efs
     accessModes: ["ReadWriteMany"]
-    size: 10Gi
+    size: 15Gi
 
 kubeApiServer:
   enabled: false
