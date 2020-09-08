@@ -171,7 +171,7 @@
   shell: "kubectl rollout status deployment.apps/pm-prometheus-operator-operator -n monitoring"
 
 - name: Base64 encode sumologic collector url
-  shell: "echo -n '{{ collector_url }}' | base64"
+  shell: "echo -n '{{ collector_url }}' | base64 | tr -d '\n'"
   register: collector_url
 
 - name: Configure sumologic secret.yaml
