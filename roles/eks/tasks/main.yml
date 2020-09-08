@@ -148,7 +148,7 @@
 - debug: var=efs
 
 - name: deploy EFS Provisioner helm chart
-  shell: "helm upgrade --install efs-prov stable/efs-provisioner --set efsProvisioner.efsFileSystemId={{ efs.stack_outputs.OutputFileSystemId }} --set efsProvisioner.awsRegion={{ region }} --set image.tag=v2.4.0 --set busyboxImage.tag=1.27"
+  shell: "helm upgrade --install efs-prov stable/efs-provisioner --set efsProvisioner.efsFileSystemId={{ efs.stack_outputs.OutputFileSystemId }} --set efsProvisioner.awsRegion={{ region }} --set efsProvisioner.allowVolumeExpansion=true --set image.tag=v2.4.0 --set busyboxImage.tag=1.27"
   
 - name: Configure prometheus values.yml
   template:
