@@ -88,6 +88,24 @@ grafana:
     accessModes: ["ReadWriteMany"]
     size: 10Gi
 
-kubelet:
-  serviceMonitor:
-    https: true
+kubeApiServer:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+coreDns:
+  enabled: false
+
+kubeDns:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+  

@@ -170,9 +170,15 @@
 - name: Wait for Prometheus Operator Install
   shell: "kubectl rollout status deployment.apps/pm-prometheus-operator-operator -n monitoring"
 
-- name: Create Sumologic Secret
-  shell: "kubectl create secret generic sumologic-secret --from-literal=collector-url={{ collector_url }} -n monitoring"
-  
+- name: Base64 encode sumologic collector url
+  shell: "echo -n '{{ collector_url }}' | base64"
+  register: collector_url
+
+- name: Configure sumologic secret.yaml
+  template:
+    src: "roles/{{ role_name }}/templates/sumologic-secret.yaml"
+    dest: /tmp/sumologic-secret.yaml
+
 - name: Configure sumo values.yml
   template:
     src: "roles/{{ role_name }}/templates/sumo-values.yaml"
